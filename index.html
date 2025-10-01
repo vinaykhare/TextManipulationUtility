@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Transformation & Analysis Tool</title>
+    <!-- Bootstrap 5.3 CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons for refresh button -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .card-header {
+            background-color: #0d6efd;
+            color: white;
+            font-weight: 600;
+        }
+        .btn-group-action .btn {
+            border-radius: 0.5rem;
+            margin: 0.25rem;
+            min-width: 120px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s;
+        }
+        .btn-group-action .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        #inputTextarea {
+            min-height: 400px;
+            font-family: monospace;
+            font-size: 0.95rem;
+            border-radius: 0.5rem;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+        }
+        .summary-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+        .summary-item strong {
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container-fluid py-4">
+        <h1 class="text-center mb-4 text-primary">Text Utility Toolkit</h1>
+        
+        <!-- Input and Summary Row -->
+        <div class="row g-4">
+            
+            <!-- Left Column: Input Text Area -->
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm h-100 border-0 rounded-3">
+                    <div class="card-header rounded-top-3">
+                        Input / Output Text
+                    </div>
+                    <div class="card-body p-0">
+                        <textarea id="inputTextarea" class="form-control" placeholder="Paste your text, JSON, or XML here..." oninput="autoUpdateSummary()"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Summary -->
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm h-100 border-0 rounded-3">
+                    <div class="card-header rounded-top-3 d-flex justify-content-between align-items-center">
+                        Text Summary
+                        <button class="btn btn-sm btn-light" onclick="updateSummary()" id="refreshSummaryBtn" title="Refresh Summary">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-2" id="summaryArea">
+                        <!-- Summary items will be inserted here -->
+                        <p class="text-muted text-center mt-3">Start typing or click the refresh button.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buttons Row -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card shadow-sm border-0 rounded-3">
+                    <div class="card-header bg-secondary text-white rounded-top-3">
+                        Transformation Actions
+                    </div>
+                    <div class="card-body d-flex flex-wrap justify-content-center btn-group-action">
+                        <!-- String Actions -->
+                        <button class="btn btn-info text-white" onclick="addQuotesForSql()">SQL Quotes</button>
+                        <button class="btn btn-primary" onclick="toUppercase()">Uppercase</button>
+                        <button class="btn btn-primary" onclick="toLowercase()">Lowercase</button>
+                        <button class="btn btn-primary" onclick="toCamelCase()">Camel Case</button>
+                        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#replaceModal">Replace</button>
+                        
+                        <!-- JSON Actions -->
+                        <button class="btn btn-success" onclick="beautifyJson()">Beautify JSON</button>
+                        <button class="btn btn-success" onclick="minifyJson()">Minify JSON</button>
+                        
+                        <!-- XML Actions -->
+                        <button class="btn btn-warning text-dark" onclick="beautifyXml()">Beautify XML</button>
+                        <button class="btn btn-warning text-dark" onclick="minifyXml()">Minify XML</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Replace Modal -->
+    <div class="modal fade" id="replaceModal" tabindex="-1" aria-labelledby="replaceModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-3 shadow-lg">
+                <div class="modal-header bg-danger text-white rounded-top-3">
+                    <h5 class="modal-title" id="replaceModalLabel">Replace Text</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="findInput" class="form-label">Word to Find (Supports \n and \t)</label>
+                        <input type="text" class="form-control rounded-2" id="findInput" placeholder="e.g., old word or \n">
+                    </div>
+                    <div class="mb-3">
+                        <label for="replaceInput" class="form-label">Replacement Word (Supports \n and \t)</label>
+                        <input type="text" class="form-control rounded-2" id="replaceInput" placeholder="e.g., new word or \t">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="executeReplace()">Execute Replace</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status/Error Message Modal -->
+    <div class="modal fade" id="statusModal" tabindex="-1" aria-labelledby="statusModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-3 shadow-lg">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="statusModalLabel">Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="statusModalBody">
+                    <!-- Message content goes here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const textarea = document.getElementById('inputTextarea');
+        const summaryArea = document.getElementById('summaryArea');
+        const statusModal = new bootstrap.Modal(document.getElementById('statusModal'));
+        const replaceModal = new bootstrap.Modal(document.getElementById('replaceModal'));
+
+        // --- Utility Functions ---
+
+        /**
+         * Shows a custom modal message instead of using alert().
+         * @param {string} title - The title of the modal.
+         * @param {string} message - The content message.
+         * @param {string} headerClass - Optional Bootstrap class for header (e.g., 'bg-danger').
+         */
+        function showStatus(title, message, headerClass = 'bg-primary text-white') {
+            document.getElementById('statusModalLabel').textContent = title;
+            document.getElementById('statusModalBody').innerHTML = message;
+            const header = document.querySelector('#statusModal .modal-header');
+            header.className = 'modal-header ' + headerClass + ' rounded-top-3';
+            statusModal.show();
+        }
+
+        /**
+         * Generic function to set new text and update summary.
+         * @param {string} newText - The transformed text.
+         * @param {string} successMessage - Message to show after transformation.
+         */
+        function updateTextAndStatus(newText, successMessage) {
+            textarea.value = newText;
+            updateSummary();
+            showStatus('Success', successMessage, 'bg-success text-white');
+        }
+
+        // --- Transformation Functions (3.1 - 3.8) ---
+
+        /** 3.1. Add Quotes for SQL */
+        function addQuotesForSql() {
+            const text = textarea.value.trim();
+            if (!text) return showStatus('Error', 'Input text is empty.', 'bg-danger text-white');
+
+            // Split by any whitespace (space, tab, newline), filter out empty strings
+            const words = text.split(/\s+/).filter(word => word.length > 0);
+            
+            // Wrap each word in single quotes and join with a comma
+            const quotedText = words.map(word => `'${word}'`).join(',');
+
+            updateTextAndStatus(quotedText, 'Text successfully wrapped in SQL quotes.');
+        }
+
+        /** 3.2. Uppercase */
+        function toUppercase() {
+            const text = textarea.value;
+            updateTextAndStatus(text.toUpperCase(), 'Text successfully converted to UPPERCASE.');
+        }
+
+        /** 3.3. Lower Case */
+        function toLowercase() {
+            const text = textarea.value;
+            updateTextAndStatus(text.toLowerCase(), 'Text successfully converted to lowercase.');
+        }
+
+        /** 3.4. Camel Case */
+        function toCamelCase() {
+            const text = textarea.value;
+            if (!text.trim()) return showStatus('Error', 'Input text is empty.', 'bg-danger text-white');
+
+            const result = text.toLowerCase().split(/\s+/g)
+                .map(word => {
+                    if (word.length === 0) return '';
+                    // Capitalize the first letter and append the rest
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                })
+                .join(' '); // Join back with spaces or whatever delimiter you prefer, using space for typical camel casing context.
+
+            updateTextAndStatus(result, 'Text successfully converted to Camel Case.');
+        }
+
+        /** 3.5. Execute Replace */
+        function executeReplace() {
+            const findInput = document.getElementById('findInput').value;
+            const replaceInput = document.getElementById('replaceInput').value;
+            let text = textarea.value;
+
+            if (findInput === '') {
+                return showStatus('Error', 'Please enter a word to find.', 'bg-danger text-white');
+            }
+            
+            // Close the modal
+            replaceModal.hide();
+
+            // Handle special characters \n and \t in find and replace strings
+            const findValue = findInput.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+            const replaceValue = replaceInput.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
+            
+            // Global regex for replacement (g flag for all occurrences)
+            const regex = new RegExp(findValue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+            
+            const newText = text.replace(regex, replaceValue);
+
+            updateTextAndStatus(newText, `All occurrences of "${findInput}" replaced with "${replaceInput}".`);
+        }
+
+        /** 3.6. Beautify JSON */
+        function beautifyJson() {
+            const text = textarea.value.trim();
+            if (!text) return showStatus('Error', 'Input text is empty.', 'bg-danger text-white');
+            
+            try {
+                const jsonObject = JSON.parse(text);
+                const beautified = JSON.stringify(jsonObject, null, 4);
+                updateTextAndStatus(beautified, 'JSON successfully beautified (4 space indentation).');
+            } catch (e) {
+                showStatus('JSON Error', 'Invalid JSON input: ' + e.message, 'bg-danger text-white');
+            }
+        }
+
+        /** 3.7. Minify JSON */
+        function minifyJson() {
+            const text = textarea.value.trim();
+            if (!text) return showStatus('Error', 'Input text is empty.', 'bg-danger text-white');
+
+            try {
+                const jsonObject = JSON.parse(text);
+                const minified = JSON.stringify(jsonObject);
+                updateTextAndStatus(minified, 'JSON successfully minified.');
+            } catch (e) {
+                showStatus('JSON Error', 'Invalid JSON input: ' + e.message, 'bg-danger text-white');
+            }
+        }
+        
+        // Simple function to indent XML
+        function formatXml(xml) {
+            let formatted = '';
+            const reg = /(>)(<)(\/*)/g;
+            xml = xml.replace(reg, '$1\r\n$2$3').trim();
+            let pad = 0;
+            const lines = xml.split('\r\n');
+            const indent = '    '; // 4 spaces
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                let matches = line.match(/(.+?)(<\/\w+>)/); // Check for self-closing or closing tag on same line
+                
+                if (matches) {
+                    // Content and closing tag on same line
+                    formatted += indent.repeat(pad) + line + '\r\n';
+                } else if (line.match(/<\/\w/)) {
+                    // Closing tag (decrement indent before adding line)
+                    pad--;
+                    formatted += indent.repeat(pad) + line + '\r\n';
+                } else if (line.match(/<\w[^>]*[^\/]>.*$/)) {
+                    // Opening tag (increment indent after adding line)
+                    formatted += indent.repeat(pad) + line + '\r\n';
+                    pad++;
+                } else {
+                    // Content or declaration
+                    formatted += indent.repeat(pad) + line + '\r\n';
+                }
+            }
+            return formatted.trim();
+        }
+
+        /** 3.8. Beautify XML */
+        function beautifyXml() {
+            const text = textarea.value.trim();
+            if (!text) return showStatus('Error', 'Input text is empty.', 'bg-danger text-white');
+
+            try {
+                // A quick check to see if it looks like XML
+                if (!text.startsWith('<')) {
+                     return showStatus('XML Error', 'Input does not appear to be valid XML.', 'bg-danger text-white');
+                }
+                const beautified = formatXml(text);
+                updateTextAndStatus(beautified, 'XML successfully beautified.');
+            } catch (e) {
+                showStatus('XML Error', 'Error during XML processing: ' + e.message, 'bg-danger text-white');
+            }
+        }
+
+        /** 3.9. Minify XML */
+        function minifyXml() {
+            const text = textarea.value.trim();
+            if (!text) return showStatus('Error', 'Input text is empty.', 'bg-danger text-white');
+            
+            // Remove newlines, tabs, and excess spaces, but preserve space *inside* text nodes.
+            // Simplified approach: remove spaces between tags
+            let minified = text.replace(/(\r\n|\n|\r|\t)/g, ''); // Remove all newlines/tabs
+            minified = minified.replace(/>\s+</g, '><'); // Remove spaces between tags
+            minified = minified.replace(/\s{2,}/g, ' '); // Replace multiple spaces with one (for text nodes)
+
+            updateTextAndStatus(minified.trim(), 'XML successfully minified.');
+        }
+
+
+        // --- Summary/Analysis Functions (4.1 - 4.8) ---
+
+        /** * 4. Page summary and refresh function
+         */
+        function updateSummary() {
+            const text = textarea.value;
+            
+            // 4.1. Number of Characters (Total length)
+            const charCount = text.length; 
+            
+            // 4.4. Number of Characters without whitespaces
+            const charNoWhitespaceCount = text.replace(/\s/g, '').length;
+
+            // 4.2. Number of Words (Words/tokens delimited by whitespace, excluding empty strings)
+            const words = text.trim().split(/\s+/).filter(w => w.length > 0);
+            const wordCount = words.length; 
+            
+            // 4.3. Number of Lines
+            const lineCount = text.split('\n').length;
+            
+            // 4.5. Number of Words without whitespaces - Assuming this is the same as 4.2: standard word count.
+            const wordNoWhitespaceCount = wordCount;
+
+            // 4.6. Number of Special Characters (excluding white spaces and alphanumeric)
+            const specialCharRegex = /[^a-zA-Z0-9\s]/g;
+            const specialCharMatches = text.match(specialCharRegex);
+            const specialCharCount = specialCharMatches ? specialCharMatches.length : 0;
+            
+            // 4.7. Number of words with special characters in it
+            const wordsWithSpecialChars = words.filter(word => specialCharRegex.test(word)).length;
+            
+            // 4.8. Number of lines with special characters in it
+            const lines = text.split('\n');
+            const linesWithSpecialChars = lines.filter(line => specialCharRegex.test(line)).length;
+
+            const summaryHtml = `
+                <div class="list-group list-group-flush border rounded-3">
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Total Characters:</span> <strong>${charCount}</strong>
+                    </div>
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Characters (No Whitespace):</span> <strong>${charNoWhitespaceCount}</strong>
+                    </div>
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Total Words/Tokens:</span> <strong>${wordCount}</strong>
+                    </div>
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Total Lines:</span> <strong>${lineCount}</strong>
+                    </div>
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Special Characters (No Whitespace):</span> <strong>${specialCharCount}</strong>
+                    </div>
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Words Containing Special Chars:</span> <strong>${wordsWithSpecialChars}</strong>
+                    </div>
+                    <div class="summary-item list-group-item d-flex justify-content-between">
+                        <span>Lines Containing Special Chars:</span> <strong>${linesWithSpecialChars}</strong>
+                    </div>
+                </div>
+            `;
+
+            summaryArea.innerHTML = summaryHtml;
+        }
+
+        // Auto-update summary on input with a slight debounce
+        let summaryTimeout;
+        function autoUpdateSummary() {
+            clearTimeout(summaryTimeout);
+            summaryTimeout = setTimeout(updateSummary, 300); // 300ms debounce
+        }
+        
+        // Initial summary update on load
+        window.onload = () => {
+            updateSummary();
+        };
+
+    </script>
+</body>
+</html>
